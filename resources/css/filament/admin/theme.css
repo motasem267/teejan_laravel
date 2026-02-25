@@ -1,0 +1,38 @@
+@import '/vendor/filament/filament/resources/css/theme.css';
+
+@config 'tailwind.config.js';
+
+html, body {
+    direction: rtl !important;
+}
+
+/* Keep toggles rendering correctly while the page uses RTL */
+:where(.fi-fo-toggle),
+:where(.fi-fo-toggle *) {
+    direction: ltr !important;
+}
+
+/* Keep labels aligned for RTL pages even when toggle is LTR */
+:where(.fi-fo-field-wrp) {
+    text-align: right;
+}
+
+/* Adjust padding and margins for RTL */
+.fi-sidebar {
+    right: 0 !important;
+    left: auto !important;
+}
+
+/* Fix form field alignments */
+.fi-fo-field-wrp {
+    text-align: right !important;
+}
+
+/* Fix table alignments */
+.fi-ta-table {
+    direction: rtl !important;
+}
+
+.fi-ta-cell {
+    text-align: right !important;
+}
