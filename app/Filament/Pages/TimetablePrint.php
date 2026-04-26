@@ -96,7 +96,7 @@ class TimetablePrint extends Page implements HasForms
         $academicYear = academic_years::find($academicYearId);
         $yearLabel    = $academicYear?->year_label ?? '';
         $days         = Day::orderBy('day_order')->get();
-        $periods      = LessonTime::orderBy('period_number')->get();
+        // we will calculate periods inside the class loop, because each class may only use a subset of lesson times
 
         // Determine which classes to build
         if ($classIdParam) {
@@ -126,11 +126,8 @@ class TimetablePrint extends Page implements HasForms
 
             // Landscape A4 usable width  273mm (297 - 12 - 12)
             $pageWidth   = 273;
-            $periodCount = $periods->count();
             $dayColW     = 25;
-            $periodColW  = $periodCount > 0
-                ? max(28, (int) round(($pageWidth - $dayColW) / $periodCount))
-                : 40;
+            // $periodColW will be calculated per-class after we know which periods are relevant
 
             $headerH = 12;
             $rowH    = 16;
@@ -180,6 +177,17 @@ class TimetablePrint extends Page implements HasForms
                         'teacher' => $tc->teacher?->name ?? '',
                     ];
                 }
+
+                // determine which lesson times are actually used by this class
+                $periods = LessonTime::whereIn('id', $schedules->pluck('lesson_time_id')->unique())
+                    ->orderBy('period_number')
+                    ->get();
+
+                // recalc column width based on the filtered periods list
+                $periodCount = $periods->count();
+                $periodColW  = $periodCount > 0
+                    ? max(28, (int) round(($pageWidth - $dayColW) / $periodCount))
+                    : 40;
 
                 //  Header row 
                 $pdf->SetFont('dejavusans', 'B', 9);
@@ -261,3 +269,4 @@ class TimetablePrint extends Page implements HasForms
         return $user->hasPermission('timetable-print.view') || $user->hasPermission('school-schedules.view');
     }
 }
+

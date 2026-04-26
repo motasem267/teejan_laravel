@@ -27,7 +27,7 @@ class WorkDaysCalendarResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
     protected static ?string $navigationLabel = 'أيام الدوام';
-    protected static string|UnitEnum|null $navigationGroup = 'ادارة الجدول';
+    protected static string|UnitEnum|null $navigationGroup = 'الشؤون المالية';
     protected static ?string $modelLabel = 'أيام دوام';
     protected static ?string $pluralModelLabel = 'أيام الدوام';
     protected static ?string $recordTitleAttribute = 'WorkDaysCalendar';

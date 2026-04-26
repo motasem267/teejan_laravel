@@ -11,18 +11,26 @@ class SchoolScheduleTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->query(SchoolSchedule::with([
-                'teacherClass.teacher',
-                'teacherClass.subject',
-                'teacherClass.classModel.grade',
-                'teacherClass.classModel.section',
-                'day',
-                'lessonTime'
-            ]))
+            ->query(
+                SchoolSchedule::query()
+                    // join related tables so we can sort by their columns
+                    ->select('school_schedules.*')
+                    ->with([
+                        'teacherClass.teacher',
+                        'teacherClass.subject',
+                        'teacherClass.classModel.grade',
+                        'teacherClass.classModel.section',
+                        'day',
+                        'lessonTime',
+                    ])
+                    ->leftJoin('days', 'days.id', '=', 'school_schedules.day_id')
+                    ->leftJoin('lesson_times', 'lesson_times.id', '=', 'school_schedules.lesson_time_id')
+            )
             ->columns([
                 TextColumn::make('day.day_name_ar')
                     ->label('اليوم')
-                    ->sortable()
+                    // explicitly point sortable to the joined table so the order clause is valid
+                    ->sortable('days.day_name_ar')
                     ->searchable(),
 
                 TextColumn::make('lessonTime.period_number')
@@ -63,7 +71,8 @@ class SchoolScheduleTable
                     ->sortable()
                     ->searchable(),
             ])
-            ->defaultSort('day.day_order', 'asc')
+            // default sort should reference the actual table name (days) and we joined it above
+            ->defaultSort('days.day_order', 'asc')
             ->filters([
                 //
             ])

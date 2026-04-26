@@ -36,7 +36,7 @@ class ExpenseForm
                     ->preload(),
                 Select::make('payment_method_id')
                     ->label('طريقة الدفع')
-                    ->relationship('paymentMethod', 'name')
+                    ->relationship('paymentMethod', 'payment_type')
                     ->searchable()
                     ->preload(),
             ]);

@@ -9,6 +9,7 @@ use App\Observers\ActivityObserver;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Auth\Events\Login;
 use App\Listeners\LogSuccessfulLogin;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+
+         if (app()->environment('production') || env('APP_ENV') === 'production')
+           { URL::forceRootUrl(config('app.url'));
+             URL::forceScheme('https');
+         }
+
+
+
         // Automatically register ActivityObserver for all Eloquent models in app/Models
         $modelsPath = app_path('Models');
 

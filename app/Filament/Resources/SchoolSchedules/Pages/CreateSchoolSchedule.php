@@ -8,6 +8,7 @@ use App\Models\SchoolSchedule;
 use App\Models\TeacherClass;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Notifications\Notification;
+use Illuminate\Validation\ValidationException;
 
 class CreateSchoolSchedule extends CreateRecord
 {
@@ -23,31 +24,34 @@ class CreateSchoolSchedule extends CreateRecord
         // Check for teacher conflict
         if (SchoolScheduleValidator::hasTeacherConflict($teacherClassId, $dayId, $lessonTimeId)) {
             $teacherClass = TeacherClass::with('teacher')->findOrFail($teacherClassId);
+            $message = 'المعلم ' . $teacherClass->teacher->name . ' لديه حصة أخرى في نفس اليوم والوقت';
+
             Notification::make()
                 ->danger()
                 ->title('تضارب جدول - معلم')
-                ->body(
-                    'المعلم ' . $teacherClass->teacher->name . ' لديه حصة أخرى في نفس اليوم والوقت'
-                )
+                ->body($message)
                 ->send();
 
-            throw new \Exception('تضارب في جدول المعلم');
+            throw ValidationException::withMessages([
+                'teacher_class_id' => $message,
+            ]);
         }
 
         // Check for class conflict
         if (SchoolScheduleValidator::hasClassConflict($teacherClassId, $dayId, $lessonTimeId)) {
             $teacherClass = TeacherClass::with('classModel.grade', 'classModel.section')->findOrFail($teacherClassId);
             $className = $teacherClass->classModel->grade->name . ' - ' . $teacherClass->classModel->section->name;
+            $message = 'الفصل ' . $className . ' لديه حصة أخرى في نفس اليوم والوقت';
 
             Notification::make()
                 ->danger()
                 ->title('تضارب جدول - فصل')
-                ->body(
-                    'الفصل ' . $className . ' لديه حصة أخرى في نفس اليوم والوقت'
-                )
+                ->body($message)
                 ->send();
 
-            throw new \Exception('تضارب في جدول الفصل');
+            throw ValidationException::withMessages([
+                'teacher_class_id' => $message,
+            ]);
         }
 
         return $data;

@@ -115,7 +115,12 @@
             $class   = $classData['class'];
             $grid    = $classData['grid'];
             $days    = $classData['days'];
-            $periods = $classData['lessonTimes'];
+            // compute periods from provided list but limit to those used in grid
+            $allPeriods = collect($classData['lessonTimes']);
+            $usedIds = collect($grid)
+                ->flatMap(fn($row) => array_keys($row))
+                ->unique();
+            $periods = $allPeriods->filter(fn($p) => $usedIds->contains($p->id));
             $yearLabel = $classData['yearLabel'] ?? '';
             $gradeName   = $class->grade?->name ?? '';
             $sectionName = $class->section?->name ?? '';

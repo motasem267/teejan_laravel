@@ -27,7 +27,7 @@ class ExpensesTable
                     ->label('المبلغ')
                     ->money('USD')
                     ->sortable(),
-                TextColumn::make('paymentMethod.name')
+                TextColumn::make('paymentMethod.payment_type')
                     ->label('طريقة الدفع')
                     ->searchable()
                     ->sortable(),

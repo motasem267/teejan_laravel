@@ -18,7 +18,7 @@ class ExpenseInfolist
                 TextEntry::make('amount')
                     ->label('المبلغ')
                     ->money('USD'),
-                TextEntry::make('paymentMethod.name')
+                TextEntry::make('paymentMethod.payment_type')
                     ->label('طريقة الدفع'),
                 TextEntry::make('date')
                     ->label('التاريخ')

@@ -7,8 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Filament\Models\Contracts\FilamentUser; // <--- إضافة 1 use Filament\Panel;
+use Filament\Panel; // <--- إضافة 2
 
-class Employee extends Authenticatable
+
+class Employee extends Authenticatable implements FilamentUser
 {
     use Notifiable;
     
@@ -42,6 +45,13 @@ class Employee extends Authenticatable
     /**
      * Get the name of the unique identifier for the user.
      */
+
+   public function canAccessPanel(Panel $panel): bool     
+    {
+       return true; 
+    }
+
+
     public function getAuthIdentifierName(): string
     {
         return 'id';
@@ -133,6 +143,14 @@ class Employee extends Authenticatable
     public function activityLogs(): HasMany
     {
         return $this->hasMany(ActivityLog::class, 'employee_id');
+    }
+
+    /**
+     * Get all daily class attendance snapshots for this employee.
+     */
+    public function dailyClassAttendances(): HasMany
+    {
+        return $this->hasMany(DailyClassAttendance::class, 'employee_id');
     }
 
     /**
