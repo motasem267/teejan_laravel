@@ -17,16 +17,11 @@ Route::middleware(['api'])->group(function () {
     })->middleware('auth:sanctum');
 
     // Student API Routes
-    Route::prefix('students')->group(function () {
-        // Get all students
-        Route::get('/', [StudentController::class, 'getAllStudents']);
-        
+    Route::prefix('students')->group(function () {        
         // Get student data by national ID
         Route::get('/national-id/{nationalId}', [StudentController::class, 'getStudentData']);
         
-        // Get student data by ID
-        Route::get('/{id}', [StudentController::class, 'getStudentById']);
-    });
+        });
     
 });
 

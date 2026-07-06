@@ -135,6 +135,13 @@ class StudentController extends Controller
             ], 404);
         }
 
+        if ($student->status_id !== 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'تم حجب النتيجة من قبل ادارة المدرسة',
+            ], 403);
+        }
+
         // كل قيود الطالب (للسماح باختيار السنة من الواجهة)
         $allEnrollments = StudentEnrollment::with(['grade', 'academicYear'])
             ->where('student_id', $student->id)
@@ -216,6 +223,13 @@ class StudentController extends Controller
                 'success' => false,
                 'message' => 'الطالب غير موجود',
             ], 404);
+        }
+
+        if ($student->status_id !== 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'تم حجب النتيجة من قبل ادارة المدرسة',
+            ], 403);
         }
 
         $allEnrollments = StudentEnrollment::with(['grade', 'academicYear'])
