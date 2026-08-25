@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\CurriculumController;
 
 // Handle preflight requests
 Route::options('{any}', function () {
@@ -17,11 +18,17 @@ Route::middleware(['api'])->group(function () {
     })->middleware('auth:sanctum');
 
     // Student API Routes
-    Route::prefix('students')->group(function () {        
+    Route::prefix('students')->group(function () {
         // Get student data by national ID
         Route::get('/national-id/{nationalId}', [StudentController::class, 'getStudentData']);
-        
+
         });
-    
+
+    // Curricula API Routes
+    Route::prefix('curricula')->group(function () {
+        Route::get('/', [CurriculumController::class, 'index'])->name('curricula.index');
+        Route::get('/{id}/file', [CurriculumController::class, 'file'])->name('curricula.file');
+    });
+
 });
 
