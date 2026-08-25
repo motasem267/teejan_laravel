@@ -14,6 +14,7 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            \App\Filament\Widgets\QuickStatsWidget::class,
             \App\Filament\Widgets\EmployeeInfoWidget::class,
         ];
     }
