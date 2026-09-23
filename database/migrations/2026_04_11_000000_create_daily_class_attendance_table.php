@@ -15,7 +15,9 @@ return new class extends Migration
 
         Schema::create('daily_class_attendance', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('employee_id')->constrained('employees')->cascadeOnDelete();
+            // employees.id هو varchar(50) فعليا (موظفين بمعرّفات نصية، Employee::$incrementing = false)
+            $table->string('employee_id', 50);
+            $table->foreign('employee_id')->references('id')->on('employees')->cascadeOnDelete();
             $table->time('start_time');
             $table->time('end_time');
             $table->string('status', 30)->default('pending');

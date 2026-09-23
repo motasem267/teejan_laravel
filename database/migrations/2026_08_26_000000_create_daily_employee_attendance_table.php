@@ -10,7 +10,9 @@ return new class extends Migration
     {
         Schema::create('daily_employee_attendance', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('employee_id')->constrained('employees')->cascadeOnDelete();
+            // employees.id هو varchar(50) فعليا (موظفين بمعرّفات نصية، Employee::$incrementing = false)
+            $table->string('employee_id', 50);
+            $table->foreign('employee_id')->references('id')->on('employees')->cascadeOnDelete();
             $table->date('date');
             $table->dateTime('first_check_in')->nullable();
             $table->dateTime('last_check_out')->nullable();
