@@ -12,10 +12,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // استخدام SQL مباشر لحذف القيود والعمود
+        // ترتيب مهم: نزيد الفهرس الجديد (وهو زادة يبدا بـ student_id) قبل ما نحذف
+        // القديم، لأن unique_student_enrollment هو الفهرس الوحيد اللي يدعم
+        // الـ Foreign Key student_enrollments_student_id_foreign — حذفه قبل ما
+        // يكون فيه بديل يعطي خطأ "Cannot drop index ... needed in a foreign key
+        // constraint".
+        DB::statement('ALTER TABLE student_enrollments ADD UNIQUE KEY unique_student_grade_year (student_id, grade_id, academic_year_id)');
         DB::statement('ALTER TABLE student_enrollments DROP INDEX unique_student_enrollment');
         DB::statement('ALTER TABLE student_enrollments DROP COLUMN semester');
-        DB::statement('ALTER TABLE student_enrollments ADD UNIQUE KEY unique_student_grade_year (student_id, grade_id, academic_year_id)');
     }
 
     /**
@@ -23,8 +27,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('ALTER TABLE student_enrollments DROP INDEX unique_student_grade_year');
+        // نفس المنطق بالعكس: نرجع العمود والفهرس القديم قبل ما نحذف الجديد.
         DB::statement("ALTER TABLE student_enrollments ADD COLUMN semester ENUM('first', 'second', 'third') COMMENT 'الفصل الدراسي: first = الأول، second = الثاني، third = الثالث' AFTER academic_year_id");
         DB::statement('ALTER TABLE student_enrollments ADD UNIQUE KEY unique_student_enrollment (student_id, grade_id, academic_year_id, semester)');
+        DB::statement('ALTER TABLE student_enrollments DROP INDEX unique_student_grade_year');
     }
 };
