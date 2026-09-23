@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // الجدول أصلا موجود ومستعمل فعليا في الإنتاج (خط أنابيب الحضور شغال عليه)
+        if (Schema::hasTable('daily_class_attendance')) {
+            return;
+        }
+
         Schema::create('daily_class_attendance', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('employee_id')->constrained('employees')->cascadeOnDelete();

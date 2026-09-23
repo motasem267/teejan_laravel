@@ -12,10 +12,16 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // العمود موجود أصلا ومستعمل فعليا في الإنتاج (academic_years::getActiveId())
+        // — ما نلمسوش لو موجود، باش ما نبدلوش السنة النشطة الحالية بالغلط.
+        if (Schema::hasColumn('academic_years', 'is_active')) {
+            return;
+        }
+
         Schema::table('academic_years', function (Blueprint $table) {
             $table->boolean('is_active')->default(false)->after('year_label');
         });
-        
+
         // جعل أول سنة دراسية هي السنة النشطة بشكل افتراضي
         DB::table('academic_years')->orderBy('id', 'asc')->limit(1)->update(['is_active' => true]);
     }
@@ -25,8 +31,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('academic_years', function (Blueprint $table) {
-            $table->dropColumn('is_active');
-        });
+        if (Schema::hasColumn('academic_years', 'is_active')) {
+            Schema::table('academic_years', function (Blueprint $table) {
+                $table->dropColumn('is_active');
+            });
+        }
     }
 };

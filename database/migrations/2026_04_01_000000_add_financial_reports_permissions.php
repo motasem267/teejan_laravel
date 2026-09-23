@@ -1,39 +1,46 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * النسخة الأصلية كانت مكتوبة لنظام صلاحيات مختلف (جداول roles/role_has_permissions
+     * وعمود guard_name) وهذا المشروع ما يستعملش هذا النظام أصلا — يستعمل جدول
+     * permissions (name/label/parent_id) + employee_permissions مباشرة، بنفس
+     * نمط add_attendance_report_permissions.php. أعدت كتابتها لتطابق النظام
+     * الفعلي، وإلا كانت بش تطيح فورا (لا roles ولا guard_name موجودين).
      */
     public function up(): void
     {
-        // Add financial report permissions
         $permissions = [
-            ['name' => 'expenses-report.view', 'guard_name' => 'web'],
-            ['name' => 'salaries-report.view', 'guard_name' => 'web'],
-            ['name' => 'revenue-report.view', 'guard_name' => 'web'],
+            ['name' => 'expenses-report', 'label' => 'تقرير المصروفات'],
+            ['name' => 'expenses-report.view', 'label' => 'عرض تقرير المصروفات'],
+            ['name' => 'salaries-report', 'label' => 'تقرير المرتبات'],
+            ['name' => 'salaries-report.view', 'label' => 'عرض تقرير المرتبات'],
+            ['name' => 'revenue-report', 'label' => 'تقرير الإيرادات'],
+            ['name' => 'revenue-report.view', 'label' => 'عرض تقرير الإيرادات'],
         ];
 
         foreach ($permissions as $permission) {
-            DB::table('permissions')->insertOrIgnore($permission);
+            DB::table('permissions')->insertOrIgnore([
+                ...$permission,
+                'parent_id' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
-        // Grant permissions to admin role
-        $adminRole = DB::table('roles')->where('name', 'admin')->first();
-        if ($adminRole) {
-            foreach (['expenses-report.view', 'salaries-report.view', 'revenue-report.view'] as $permissionName) {
-                $permission = DB::table('permissions')->where('name', $permissionName)->first();
-                if ($permission) {
-                    DB::table('role_has_permissions')->insertOrIgnore([
-                        'permission_id' => $permission->id,
-                        'role_id' => $adminRole->id,
-                    ]);
-                }
+        foreach (['expenses-report', 'salaries-report', 'revenue-report'] as $group) {
+            $parent = DB::table('permissions')->where('name', $group)->first();
+
+            if ($parent) {
+                DB::table('permissions')
+                    ->where('name', $group . '.view')
+                    ->update(['parent_id' => $parent->id]);
             }
         }
     }
@@ -44,8 +51,11 @@ return new class extends Migration
     public function down(): void
     {
         DB::table('permissions')->whereIn('name', [
+            'expenses-report',
             'expenses-report.view',
-            'salaries-report.view', 
+            'salaries-report',
+            'salaries-report.view',
+            'revenue-report',
             'revenue-report.view',
         ])->delete();
     }
