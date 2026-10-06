@@ -3,6 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Models\ActivityLog;
+use App\Models\Employee;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -53,17 +55,35 @@ class ChangePassword extends Page implements HasForms
         $this->form->fill();
     }
 
+    protected function canPickAnyEmployee(): bool
+    {
+        $user = Auth::user();
+
+        return $user
+            && ! $this->employeeId
+            && method_exists($user, 'hasPermission')
+            && $user->hasPermission('employees.change-password');
+    }
+
     public function form(Schema $schema): Schema
     {
-        $isChangingOther = $this->employeeId && auth()->user() && auth()->id() !== $this->employeeId;
+        $canPickAnyEmployee = $this->canPickAnyEmployee();
 
         return $schema
             ->schema([
+                Select::make('target_employee_id')
+                    ->label('الحساب')
+                    ->helperText('اختر الحساب اللي تحب تغيّر كلمة مروره — سيبه فارغ باش تغيّر كلمة مرورك انت')
+                    ->options(fn () => Employee::query()->orderBy('name')->pluck('name', 'id'))
+                    ->searchable()
+                    ->live()
+                    ->visible($canPickAnyEmployee),
+
                 TextInput::make('current_password')
                     ->label('كلمة المرور الحالية')
                     ->password()
-                    ->required(fn () => ! $isChangingOther)
-                    ->visible(fn () => ! $isChangingOther),
+                    ->required(fn ($get) => ! $canPickAnyEmployee || ! $get('target_employee_id'))
+                    ->visible(fn ($get) => ! $canPickAnyEmployee || ! $get('target_employee_id')),
 
                 TextInput::make('new_password')
                     ->label('كلمة المرور الجديدة')
@@ -90,15 +110,17 @@ class ChangePassword extends Page implements HasForms
             return;
         }
 
-        // If an employeeId was provided and differs from current user, change that employee's password
-        if ($this->employeeId && $this->employeeId !== $currentUser->id) {
+        $targetEmployeeId = $this->employeeId ?: ($data['target_employee_id'] ?? null);
+
+        // If a target employee was provided (via URL or the picker) and differs from current user, change that employee's password
+        if ($targetEmployeeId && (string) $targetEmployeeId !== (string) $currentUser->id) {
             // ensure current user has permission
             if (! method_exists($currentUser, 'hasPermission') || ! $currentUser->hasPermission('employees.change-password')) {
                 Notification::make()->title('خطأ')->body('لا تملك صلاحية تغيير كلمة مرور موظف آخر')->danger()->send();
                 return;
             }
 
-            $employee = \App\Models\Employee::find($this->employeeId);
+            $employee = \App\Models\Employee::find($targetEmployeeId);
             if (! $employee) {
                 Notification::make()->title('خطأ')->body('الموظف غير موجود')->danger()->send();
                 return;
