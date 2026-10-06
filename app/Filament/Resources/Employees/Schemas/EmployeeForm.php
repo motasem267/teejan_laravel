@@ -14,10 +14,9 @@ class EmployeeForm
             ->components([
                 TextInput::make('id')
                     ->label('رقم الموظف')
-                    ->numeric()
                     ->required()
                     ->unique(ignoreRecord: true)
-                    ->minValue(1),
+                    ->maxLength(50),
                 TextInput::make('name')
                     ->label('الاسم الكامل')
                     ->required(),
