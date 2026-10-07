@@ -20,8 +20,8 @@ class ViewEmployee extends ViewRecord
             EditAction::make(),
             Action::make('change_password')
                 ->label('تغيير كلمة المرور')
-                ->url(fn () => ChangePassword::getUrl('index') . '?employee_id=' . $this->record->id)
-                ->visible(fn () => Auth::check() && (Auth::id() === $this->record->id || (method_exists(Auth::user(), 'hasPermission') && Auth::user()->hasPermission('employees.change-password')))),
+                ->url(fn () => ChangePassword::getUrl(['employee_id' => $this->record->id]))
+                ->visible(fn () => Auth::check() && ((string) Auth::id() === (string) $this->record->id || (method_exists(Auth::user(), 'hasPermission') && Auth::user()->hasPermission('employees.change-password')))),
         ];
     }
 }

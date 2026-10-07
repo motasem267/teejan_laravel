@@ -25,7 +25,7 @@ class ChangePassword extends Page implements HasForms
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-lock-closed';
 
     public ?array $data = [];
-    public ?int $employeeId = null;
+    public ?string $employeeId = null;
 
     public static function canAccess(): bool
     {
@@ -37,7 +37,7 @@ class ChangePassword extends Page implements HasForms
         // If an employee_id is present in the query and it's not the current user,
         // require the permission to change other employees' passwords.
         $employeeId = request()->query('employee_id');
-        if ($employeeId && intval($employeeId) !== $user->id) {
+        if ($employeeId && (string) $employeeId !== (string) $user->id) {
             if (! method_exists($user, 'hasPermission')) {
                 return false;
             }
@@ -51,7 +51,7 @@ class ChangePassword extends Page implements HasForms
 
     public function mount(): void
     {
-        $this->employeeId = request()->query('employee_id') ? intval(request()->query('employee_id')) : null;
+        $this->employeeId = request()->query('employee_id') ? (string) request()->query('employee_id') : null;
         $this->form->fill();
     }
 

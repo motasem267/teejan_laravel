@@ -30,6 +30,8 @@ class Employee extends Authenticatable implements FilamentUser
     ];
     
     public $incrementing = false;
+
+    protected $keyType = 'string';
     
     protected $hidden = [
         'password',

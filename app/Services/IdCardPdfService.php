@@ -13,6 +13,8 @@ use TCPDF;
  * توليد بطاقات التعريف (الطلبة والموظفين) بصيغة PDF.
  *
  * مقاس البطاقة القياسي CR80 (85.6 × 54 مم) وهو مقاس البطاقات البنكية.
+ * تحتوي على مربع فارغ لتدبيس الصورة الشخصية.
+ *
  * يدعم تخطيطين:
  *  - a4   : 10 بطاقات في صفحة A4 جاهزة للقص.
  *  - card : بطاقة واحدة لكل صفحة بمقاس البطاقة (لطابعات البطاقات البلاستيكية).
@@ -91,7 +93,6 @@ class IdCardPdfService
                     ['الصف / الشعبة', $classLabel ?: '—'],
                 ],
                 'footer' => $yearLabel ? 'العام الدراسي ' . $yearLabel : 'تاريخ الإصدار ' . now()->format('Y/m/d'),
-                'qr' => $this->qrPayload('STU', $student->id),
             ];
         })->values()->all();
 
@@ -115,10 +116,8 @@ class IdCardPdfService
             'rows' => [
                 ['الرقم الوظيفي', (string) $employee->id],
                 ['الوظيفة', $employee->employeeType?->type_name ?: '—'],
-                ['رقم الهاتف', $employee->phone_number ?: '—'],
             ],
             'footer' => 'تاريخ الإصدار ' . now()->format('Y/m/d'),
-            'qr' => $this->qrPayload('EMP', $employee->id),
         ])->values()->all();
 
         return $this->render($cards, $layout, 'بطاقات الموظفين');
@@ -129,11 +128,6 @@ class IdCardPdfService
         $prefix = $type === self::TYPE_STUDENT ? 'بطاقات_الطلبة' : 'بطاقات_الموظفين';
 
         return $prefix . '_' . $count . '_' . now()->format('Y_m_d_His') . '.pdf';
-    }
-
-    private function qrPayload(string $kind, int|string $id): string
-    {
-        return config('id_cards.qr_prefix', 'TEEJAN') . ':' . $kind . ':' . $id;
     }
 
     private function render(array $cards, string $layout, string $title): string
@@ -236,24 +230,25 @@ class IdCardPdfService
         $pdf->SetXY($x + $pad, $y + 5.2);
         $pdf->Cell(22, 3, $card['title_en'], 0, 0, 'L');
 
-        // رمز QR + الرقم تحته
-        $qrSize = 20.0;
-        $qrX = $x + $pad;
-        $qrY = $y + $headerH + 3.2;
-        $pdf->write2DBarcode($card['qr'], 'QRCODE,M', $qrX, $qrY, $qrSize, $qrSize, [
-            'border' => false,
-            'padding' => 0,
-            'fgcolor' => self::COLOR_TEXT,
-            'bgcolor' => false,
-        ], 'N');
+        // مربع فارغ لتدبيس الصورة الشخصية (نسبة 3:4 تقريباً)
+        $photoW = 22.0;
+        $photoH = 27.5;
+        $photoX = $x + $pad;
+        $photoY = $y + $headerH + 2.6;
+        $pdf->RoundedRect($photoX, $photoY, $photoW, $photoH, 1.2, '1111', 'DF', [
+            'width' => 0.3,
+            'dash' => '1,1',
+            'color' => self::COLOR_GOLD,
+        ], [252, 250, 246]);
 
-        $pdf->SetFont(self::FONT_LATIN, 'B', 6.5);
-        $pdf->SetTextColor(...self::COLOR_TEXT);
-        $pdf->SetXY($qrX, $qrY + $qrSize + 0.8);
-        $pdf->Cell($qrSize, 3, 'ID: ' . $card['id'], 0, 0, 'C');
+        $pdf->SetFont(self::FONT, '', 9);
+        $pdf->SetTextColor(...self::COLOR_MUTED);
+        $pdf->SetXY($photoX, $photoY + ($photoH - 5) / 2);
+        $pdf->Cell($photoW, 5, 'الصورة', 0, 0, 'C');
+        $pdf->SetLineStyle(['width' => 0.2, 'dash' => 0]);
 
         // الاسم
-        $infoLeft = $qrX + $qrSize + 4.0;
+        $infoLeft = $photoX + $photoW + 4.0;
         $infoRight = $x + $w - $pad;
         $infoW = $infoRight - $infoLeft;
 

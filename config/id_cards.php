@@ -15,7 +15,4 @@ return [
     // نص يظهر في أسفل البطاقة
     'footer_note' => env('ID_CARD_FOOTER_NOTE', 'في حال العثور على البطاقة يرجى تسليمها للإدارة'),
 
-    // البادئة المستخدمة في رمز QR (مثال: TEEJAN:STU:15)
-    'qr_prefix' => env('ID_CARD_QR_PREFIX', 'TEEJAN'),
-
 ];
