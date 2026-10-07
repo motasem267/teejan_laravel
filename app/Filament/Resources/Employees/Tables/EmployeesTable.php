@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Employees\Tables;
 
+use App\Filament\Actions\IdCardActions;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -43,9 +44,11 @@ class EmployeesTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
+                IdCardActions::employeeRecord(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    IdCardActions::employeesBulk(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

@@ -115,6 +115,7 @@ class AssignPermissions extends Page implements HasForms
                             'الإعدادات الأكاديمية' => ['grades', 'classes', 'sections', 'subjects', 'academic-years', 'academic-periods', 'academic-period-grades', 'week-results'],
                             'التقييمات والدرجات' => ['marks', 'evaluation_types', 'evaluation-questions', 'evaluation-answers', 'student-evaluation'],
                             'التقارير والمراقبة' => ['student-evaluations-report', 'reports', 'attendance-report', 'expenses-report', 'salaries-report', 'revenue-report'],
+                            'بطاقات التعريف' => ['id-cards'],
                             'الجدول الدراسي' => ['school-schedules', 'lesson-times', 'lesson_types', 'days', 'work-days-calendars', 'timetable-print'],
                             'النظام' => ['permissions', 'activity-logs', 'assign-permissions'],
                         ];

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Students\Tables;
 
+use App\Filament\Actions\IdCardActions;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -70,9 +71,11 @@ class StudentsTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
+                IdCardActions::studentRecord(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    IdCardActions::studentsBulk(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

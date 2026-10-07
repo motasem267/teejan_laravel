@@ -62,6 +62,10 @@ class PermissionsSeeder extends Seeder
                 ['suffix' => '.monitoring', 'label' => 'مراقبة التقييمات الأسبوعية'],
             ]],
             ['name' => 'assign-permissions', 'label' => 'إعطاء الصلاحيات'],
+            ['name' => 'id-cards', 'label' => 'بطاقات التعريف', 'skip_default_actions' => true, 'extra_actions' => [
+                ['suffix' => '.students', 'label' => 'إصدار بطاقات الطلبة'],
+                ['suffix' => '.employees', 'label' => 'إصدار بطاقات الموظفين'],
+            ]],
         ];
 
         $actions = [
