@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Filament\Actions\IdCardActions;
 use App\Models\academic_years;
+use App\Models\ClassModel;
 use App\Models\Employee;
 use App\Models\EmployeeStatus;
 use App\Models\EmployeeType;
@@ -145,10 +146,13 @@ class IdCards extends Page implements HasForms
 
                         Select::make('section_id')
                             ->label('الشعبة')
-                            ->options(fn (Get $get) => Section::query()
-                                ->when($get('grade_id'), fn ($q, $gradeId) => $q->where('grade_id', $gradeId))
-                                ->orderBy('name')
-                                ->pluck('name', 'id'))
+                            // الربط بين الصف والشعبة موجود في جدول الفصول (classes)
+                            ->options(fn (Get $get) => $get('grade_id')
+                                ? Section::query()
+                                    ->whereIn('id', ClassModel::where('grade_id', $get('grade_id'))->select('section_id'))
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                : [])
                             ->placeholder('كل الشعب')
                             ->disabled(fn (Get $get) => ! $get('grade_id'))
                             ->visible(fn (Get $get) => $this->isStudents($get) && $get('scope') === self::SCOPE_ALL),
