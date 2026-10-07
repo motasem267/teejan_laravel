@@ -39,7 +39,20 @@ class GradePromotion extends Page implements HasForms
 
     public function mount(): void
     {
-        $this->form->fill();
+        $this->form->fill($this->defaultYears());
+    }
+
+    /**
+     * الافتراضي: من السنة الفعالة إلى السنة اللي بعدها.
+     */
+    protected function defaultYears(): array
+    {
+        $current = academic_years::getActiveId();
+
+        return [
+            'current_academic_year_id' => $current,
+            'new_academic_year_id' => $current ? academic_years::where('id', '>', $current)->orderBy('id')->value('id') : null,
+        ];
     }
     
     public function getView(): string
@@ -63,15 +76,16 @@ class GradePromotion extends Page implements HasForms
 
                         Select::make('current_academic_year_id')
                             ->label('السنة الدراسية الحالية')
-                            ->options(academic_years::all()->pluck('year_label', 'id'))
+                            ->options(academic_years::orderByDesc('id')->pluck('year_label', 'id'))
                             ->required()
                             ->live()
                             ->afterStateUpdated(fn () => $this->updateStudentsList()),
 
                         Select::make('new_academic_year_id')
                             ->label('السنة الدراسية الجديدة (للترحيل)')
-                            ->options(academic_years::all()->pluck('year_label', 'id'))
+                            ->options(academic_years::orderByDesc('id')->pluck('year_label', 'id'))
                             ->required()
+                            ->different('current_academic_year_id')
                             ->helperText('السنة التي سيتم نقل الطلبة إليها'),
                     ])
                     ->columns(3),
@@ -233,8 +247,7 @@ class GradePromotion extends Page implements HasForms
             // إعادة تعيين النموذج
             $this->form->fill([
                 'current_grade_id' => null,
-                'current_academic_year_id' => null,
-                'new_academic_year_id' => null,
+                ...$this->defaultYears(),
                 'selected_students' => [],
             ]);
 

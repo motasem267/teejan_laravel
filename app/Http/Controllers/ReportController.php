@@ -215,54 +215,30 @@ class ReportController extends Controller
             abort(403, 'غير مصرح بالوصول');
         }
 
-        $academicYear = request('year');
+        // السنة بالرقم (year_id)، مع دعم الرابط القديم بالاسم (year)
+        $yearId = request()->integer('year_id') ?: null;
+        if (! $yearId && request()->filled('year')) {
+            $yearId = \App\Models\academic_years::where('year_label', request('year'))->value('id');
+        }
+        $yearLabel = $yearId ? \App\Models\academic_years::find($yearId)?->year_label : null;
+
+        $calculator = new \App\Services\RevenueCalculator;
 
         $records = ParentModel::query()
+            ->when($yearId, fn ($q) => $q->whereHas('students.enrollments', fn ($e) => $e->where('academic_year_id', $yearId)))
+            ->orderBy('name')
             ->get()
-            ->map(function ($parent) use ($academicYear) {
-                $students = $parent->students;
-                $totalAmount = 0;
-
-                // احصل على المبلغ المستحق من رسوم الاشتراك السنوي
-                foreach ($students as $student) {
-                    $enrollment = $student->enrollments()
-                        ->when($academicYear, function ($q) use ($academicYear) {
-                            $q->whereHas('academicYear', function ($query) use ($academicYear) {
-                                $query->where('year_label', $academicYear);
-                            });
-                        })
-                        ->first();
-
-                    if ($enrollment) {
-                        $fee = \App\Models\AnnualSubscriptionFee::where('grade_id', $enrollment->grade_id)
-                            ->where('academic_year_id', $enrollment->academic_year_id)
-                            ->first();
-
-                        if ($fee) {
-                            $totalAmount += $fee->amount;
-                        }
-                    }
-                }
-
-                // احصل على المبلغ المدفوع من جدول الاقساط فقط (قسط سنوي فقط)
-                $paidAmount = \App\Models\Installment::where('parent_id', $parent->id)
-                    ->where('installment_type_id', 1) // قسط سنوي فقط
-                    ->whereNotNull('payment_type_id')
-                    ->when($academicYear, function ($q) use ($academicYear) {
-                        $q->where('academic_year', $academicYear);
-                    })
-                    ->sum('amount');
+            ->map(function ($parent) use ($calculator, $yearId) {
+                $totals = $calculator->forParent((int) $parent->id, $yearId);
 
                 return [
                     'id' => $parent->id,
                     'name' => $parent->name,
                     'phone' => $parent->phone,
-                    'total_amount' => $totalAmount,
-                    'paid_amount' => $paidAmount,
-                    'remaining_amount' => $totalAmount - $paidAmount,
-                    'payment_percentage' => $totalAmount > 0 
-                        ? ($paidAmount / $totalAmount) * 100 
-                        : 0,
+                    'total_amount' => $totals['due'],
+                    'paid_amount' => $totals['paid'],
+                    'remaining_amount' => $totals['remaining'],
+                    'payment_percentage' => $totals['percentage'],
                 ];
             })
             ->filter(fn ($record) => $record['total_amount'] > 0);
@@ -291,7 +267,7 @@ class ReportController extends Controller
             $pdf->Cell(0, 8, 'تقرير الإيرادات', 0, 1, 'C');
             $pdf->SetFont('dejavusans', '', 10);
             $pdf->SetTextColor(100, 100, 100);
-            $pdf->Cell(0, 5, 'السنة الدراسية', 0, 1, 'C');
+            $pdf->Cell(0, 5, $yearLabel ? 'السنة الدراسية ' . $yearLabel : 'كل السنوات الدراسية', 0, 1, 'C');
             $pdf->Ln(8);
 
             // بناء جدول HTML يأخذ العرض كامل

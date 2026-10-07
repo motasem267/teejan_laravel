@@ -22,7 +22,7 @@ class InstallmentInfolist
                     ->label('الوصف'),
                 TextEntry::make('paymentMethod.payment_type')
                     ->label('طريقة الدفع'),
-                TextEntry::make('academic_year')
+                TextEntry::make('academicYear.year_label')
                     ->label('السنة الدراسية'),
                 TextEntry::make('creator.name')
                     ->label('تم الإنشاء بواسطة'),

@@ -6,7 +6,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use App\Models\academic_years;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class InstallmentsTable
@@ -30,14 +32,18 @@ class InstallmentsTable
                 TextColumn::make('paymentMethod.payment_type')
                     ->label('طريقة الدفع')
                     ->searchable(),
-                TextColumn::make('academic_year')
-                    ->label('السنة الدراسية')
-                    ->searchable(),
+                TextColumn::make('academicYear.year_label')
+                    ->label('السنة الدراسية'),
                 TextColumn::make('creator.name')
                     ->label('تم الإنشاء بواسطة')
                     ->searchable(),
             ])
-            ->filters([])
+            ->filters([
+                SelectFilter::make('academic_year')
+                    ->label('السنة الدراسية')
+                    ->options(fn () => academic_years::orderByDesc('id')->pluck('year_label', 'id'))
+                    ->default(academic_years::getActiveId()),
+            ])
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -48,10 +49,33 @@ class Employee extends Authenticatable implements FilamentUser
      * Get the name of the unique identifier for the user.
      */
 
-   public function canAccessPanel(Panel $panel): bool     
+    public function canAccessPanel(Panel $panel): bool
     {
-       return true; 
+        return $this->isAllowedForActiveYear();
     }
+
+    /**
+     * الموظف لازم يكون مقيد في السنة الدراسية الفعالة باش يدخل للمنظومة.
+     *
+     * استثناءات لتفادي قفل المنظومة على الكل:
+     *  - لا توجد سنة فعالة، أو السنة الفعالة ما فيها حتى قيد موظف (مثلاً سنة جديدة لسه ما تم الترحيل لها).
+     *  - الموظف عنده صلاحية ترحيل الموظفين (هو المسؤول عن القيود).
+     */
+    public function isAllowedForActiveYear(): bool
+    {
+        return $this->allowedForActiveYear ??= (function (): bool {
+            $activeYearId = academic_years::getActiveId();
+
+            if (! $activeYearId || ! EmployeeEnrollment::where('academic_year_id', $activeYearId)->exists()) {
+                return true;
+            }
+
+            return $this->enrollments()->where('academic_year_id', $activeYearId)->exists()
+                || $this->hasPermission('employee-promotion.view');
+        })();
+    }
+
+    private ?bool $allowedForActiveYear = null;
 
 
     public function getAuthIdentifierName(): string
@@ -105,6 +129,27 @@ class Employee extends Authenticatable implements FilamentUser
     public function salaryType(): BelongsTo
     {
         return $this->belongsTo(SalaryType::class, 'salary_by');
+    }
+
+    /**
+     * قيود الموظف في السنوات الدراسية.
+     */
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(EmployeeEnrollment::class, 'employee_id');
+    }
+
+    /**
+     * الموظفين المقيدين في سنة دراسية (الافتراضي: السنة الفعالة).
+     * $includeId: يضمن ظهور موظف معين حتى لو مش مقيد (مثلاً عند تعديل سجل قديم).
+     */
+    public function scopeEnrolledIn(Builder $query, int|string|null $academicYearId = null, ?string $includeId = null): Builder
+    {
+        $academicYearId ??= academic_years::getActiveId();
+
+        return $query->where(fn ($q) => $q
+            ->whereHas('enrollments', fn ($e) => $e->where('academic_year_id', $academicYearId))
+            ->when($includeId, fn ($q) => $q->orWhere('id', $includeId)));
     }
 
     /**

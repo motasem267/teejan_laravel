@@ -22,7 +22,10 @@ class TeacherClassForm
                     ->relationship(
                         'teacher',
                         'name',
-                        fn (Builder $query) => $query->whereHas('employeeType', fn ($q) => $q->where('type_name', 'LIKE', '%معلم%'))
+                        // معلمين مقيدين في السنة المختارة في النموذج (مع إبقاء المعلم الحالي عند التعديل)
+                        fn (Builder $query, $get, $record) => $query
+                            ->whereHas('employeeType', fn ($q) => $q->where('type_name', 'LIKE', '%معلم%'))
+                            ->enrolledIn($get('academic_year_id'), $record?->teacher_id)
                     )
                     ->required()
                     ->searchable()
@@ -56,6 +59,7 @@ class TeacherClassForm
                     ->relationship('academicYear', 'year_label')
                     ->default(\App\Models\academic_years::getActiveId())
                     ->required()
+                    ->live()
                     ->searchable()
                     ->preload(),
                             ]);

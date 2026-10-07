@@ -19,6 +19,10 @@ class PermissionsSeeder extends Seeder
                 ['suffix' => '.update', 'label' => 'تحديث قيد طالب'],
             ]],
             ['name' => 'employees', 'label' => 'الموظفين'],
+            ['name' => 'employee_enrollments', 'label' => 'قيد الموظفين'],
+            ['name' => 'employee-promotion', 'label' => 'ترحيل الموظفين', 'skip_default_actions' => true, 'extra_actions' => [
+                ['suffix' => '.view', 'label' => 'ترحيل الموظفين للسنة الجديدة'],
+            ]],
             ['name' => 'grades', 'label' => 'المراحل الدراسية'],
             ['name' => 'subjects', 'label' => 'المواد'],
             ['name' => 'marks', 'label' => 'الدرجات'],
@@ -62,6 +66,9 @@ class PermissionsSeeder extends Seeder
                 ['suffix' => '.monitoring', 'label' => 'مراقبة التقييمات الأسبوعية'],
             ]],
             ['name' => 'assign-permissions', 'label' => 'إعطاء الصلاحيات'],
+            ['name' => 'student-lists', 'label' => 'قوائم الطلبة', 'skip_default_actions' => true, 'extra_actions' => [
+                ['suffix' => '.export', 'label' => 'استخراج قوائم الطلبة'],
+            ]],
             ['name' => 'id-cards', 'label' => 'بطاقات التعريف', 'skip_default_actions' => true, 'extra_actions' => [
                 ['suffix' => '.students', 'label' => 'إصدار بطاقات الطلبة'],
                 ['suffix' => '.employees', 'label' => 'إصدار بطاقات الموظفين'],

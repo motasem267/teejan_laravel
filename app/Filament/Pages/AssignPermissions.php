@@ -109,8 +109,8 @@ class AssignPermissions extends Page implements HasForms
                         $components = [];
 
                         $permissionGroups = [
-                            'إدارة الطلبة وأولياء الأمور' => ['students', 'parents', 'student_enrollments', 'student_status', 'grade-promotion'],
-                            'إدارة الموظفين والمعلمين' => ['employees', 'employee-types', 'employee-statuses', 'teacher-classes'],
+                            'إدارة الطلبة وأولياء الأمور' => ['students', 'parents', 'student_enrollments', 'student_status', 'grade-promotion', 'student-lists'],
+                            'إدارة الموظفين والمعلمين' => ['employees', 'employee_enrollments', 'employee-promotion', 'employee-types', 'employee-statuses', 'teacher-classes'],
                             'الشؤون المالية' => ['installments', 'installment_types', 'annual_subscription_fees', 'expenses', 'expenses_types', 'bonuses', 'bonus_types', 'deductions', 'deduction_types', 'salaries', 'salary-types'],
                             'الإعدادات الأكاديمية' => ['grades', 'classes', 'sections', 'subjects', 'academic-years', 'academic-periods', 'academic-period-grades', 'week-results'],
                             'التقييمات والدرجات' => ['marks', 'evaluation_types', 'evaluation-questions', 'evaluation-answers', 'student-evaluation'],

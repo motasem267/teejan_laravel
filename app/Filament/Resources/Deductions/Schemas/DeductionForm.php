@@ -16,7 +16,8 @@ class DeductionForm
             ->components([
                 Select::make('emp_id')
                     ->label('الموظف')
-                    ->relationship('employee', 'name')
+                    // الموظفين المقيدين في السنة الفعالة (مع إبقاء الموظف الحالي عند التعديل)
+                    ->relationship('employee', 'name', fn ($query, $record) => $query->enrolledIn(null, $record?->emp_id))
                     ->required()
                     ->searchable()
                     ->preload(),

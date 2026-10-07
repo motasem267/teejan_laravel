@@ -30,7 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(\App\Filament\Pages\Auth\Login::class)
             ->authGuard('web')
             ->brandName('نظام ادارة تيجان العلم')
             ->favicon(asset('images/logo.png'))
@@ -68,6 +68,12 @@ class AdminPanelProvider extends PanelProvider
     
     public function boot(): void
     {
+        // السنة الدراسية الفعالة ظاهرة في أعلى كل صفحة
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+            fn (): string => view('filament.components.active-year-badge')->render(),
+        );
+
         FilamentView::registerRenderHook(
             PanelsRenderHook::HEAD_END,
             fn (): string => Blade::render(<<<'HTML'

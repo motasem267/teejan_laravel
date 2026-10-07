@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\SchoolSchedules\Tables;
 
+use App\Models\academic_years;
 use App\Models\SchoolSchedule;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class SchoolScheduleTable
@@ -74,7 +76,15 @@ class SchoolScheduleTable
             // default sort should reference the actual table name (days) and we joined it above
             ->defaultSort('days.day_order', 'asc')
             ->filters([
-                //
+                // الجدول مرتبط بالسنة عن طريق توزيع المعلمين
+                SelectFilter::make('academic_year')
+                    ->label('السنة الدراسية')
+                    ->options(fn () => academic_years::orderByDesc('id')->pluck('year_label', 'id'))
+                    ->default(academic_years::getActiveId())
+                    ->query(fn ($query, array $data) => $query->when(
+                        $data['value'] ?? null,
+                        fn ($q, $yearId) => $q->whereHas('teacherClass', fn ($t) => $t->where('academic_year_id', $yearId)),
+                    )),
             ])
             ->actions([
                 //

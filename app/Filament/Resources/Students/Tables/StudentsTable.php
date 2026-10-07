@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Students\Tables;
 
 use App\Filament\Actions\IdCardActions;
+use App\Models\academic_years;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -61,6 +62,16 @@ class StudentsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                // الافتراضي: الطلبة المقيدين في السنة الفعالة (امسح الفلتر لعرض كل الطلبة)
+                SelectFilter::make('academic_year')
+                    ->label('مقيد في السنة الدراسية')
+                    ->options(fn () => academic_years::orderByDesc('id')->pluck('year_label', 'id'))
+                    ->default(academic_years::getActiveId())
+                    ->query(fn ($query, array $data) => $query->when(
+                        $data['value'] ?? null,
+                        fn ($q, $yearId) => $q->enrolledIn($yearId),
+                    )),
+
                 SelectFilter::make('status_id')
                     ->label('فلترة حسب الحالة')
                     ->relationship('status', 'name')

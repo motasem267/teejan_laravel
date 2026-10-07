@@ -36,7 +36,24 @@ class academic_years extends Model
      */
     public static function getActive()
     {
-        return self::where('is_active', true)->first();
+        return once(fn () => self::where('is_active', true)->first());
+    }
+
+    public static function getActiveLabel(): ?string
+    {
+        return self::getActive()?->year_label;
+    }
+
+    /**
+     * سنة دراسية وحدة بس تكون فعالة: تفعيل سنة يلغي تفعيل الباقي.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (self $year) {
+            if ($year->is_active && ($year->wasChanged('is_active') || $year->wasRecentlyCreated)) {
+                self::where('id', '!=', $year->id)->where('is_active', true)->update(['is_active' => false]);
+            }
+        });
     }
     
     /**

@@ -122,8 +122,9 @@ class AttendanceDetailedReport extends Page implements HasTable
                         Select::make('employee_id')
                             ->label('المعلم/ة')
                             ->options(function () {
+                                // المعلمين اللي عندهم توزيع في السنة الفعالة
                                 return Employee::query()
-                                    ->whereHas('teacherClasses')
+                                    ->whereHas('teacherClasses', fn ($q) => $q->where('academic_year_id', \App\Models\academic_years::getActiveId()))
                                     ->orderBy('name')
                                     ->pluck('name', 'id');
                             })

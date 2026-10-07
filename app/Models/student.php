@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -67,5 +68,15 @@ class student extends Model
     public function enrollments(): HasMany
     {
         return $this->hasMany(StudentEnrollment::class);
+    }
+
+    /**
+     * الطلبة المقيدين في سنة دراسية (الافتراضي: السنة الفعالة).
+     */
+    public function scopeEnrolledIn(Builder $query, int|string|null $academicYearId = null): Builder
+    {
+        $academicYearId ??= academic_years::getActiveId();
+
+        return $query->whereHas('enrollments', fn ($q) => $q->where('academic_year_id', $academicYearId));
     }
 }

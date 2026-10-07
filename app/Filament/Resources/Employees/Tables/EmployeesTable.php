@@ -3,11 +3,13 @@
 namespace App\Filament\Resources\Employees\Tables;
 
 use App\Filament\Actions\IdCardActions;
+use App\Models\academic_years;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class EmployeesTable
@@ -39,7 +41,13 @@ class EmployeesTable
                     ->searchable(),
             ])
             ->filters([
-                //
+                SelectFilter::make('academic_year')
+                    ->label('مقيد في السنة الدراسية')
+                    ->options(fn () => academic_years::orderByDesc('id')->pluck('year_label', 'id'))
+                    ->query(fn ($query, array $data) => $query->when(
+                        $data['value'] ?? null,
+                        fn ($q, $yearId) => $q->whereHas('enrollments', fn ($e) => $e->where('academic_year_id', $yearId)),
+                    )),
             ])
             ->recordActions([
                 ViewAction::make(),

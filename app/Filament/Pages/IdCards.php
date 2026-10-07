@@ -181,7 +181,10 @@ class IdCards extends Page implements HasForms
                 SchemaSection::make('خيارات الطباعة')
                     ->schema([
                         IdCardActions::academicYearField()
-                            ->visible(fn (Get $get) => $this->isStudents($get)),
+                            ->helperText(fn (Get $get) => $this->isStudents($get)
+                                ? 'يُطبع الصف والشعبة حسب قيد الطالب في هذه السنة'
+                                : 'عند اختيار "كل الموظفين" تُصدر البطاقات للمقيدين في هذه السنة فقط')
+                            ->visible(fn (Get $get) => $this->isStudents($get) || $get('scope') === self::SCOPE_ALL),
 
                         IdCardActions::layoutField(),
                     ])
@@ -248,6 +251,10 @@ class IdCards extends Page implements HasForms
             self::SCOPE_SINGLE => Employee::whereKey($data['person_id']),
             self::SCOPE_SELECTED => Employee::whereKey($data['person_ids'] ?? []),
             default => Employee::query()
+                ->when($data['academic_year_id'] ?? null, fn ($q, $yearId) => $q->whereHas(
+                    'enrollments',
+                    fn ($e) => $e->where('academic_year_id', $yearId),
+                ))
                 ->whereNotNull('name')
                 ->where('name', '!=', '')
                 ->when($data['emp_type_id'] ?? null, fn ($q, $id) => $q->where('emp_type_id', $id))

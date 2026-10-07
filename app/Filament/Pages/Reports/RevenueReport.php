@@ -6,19 +6,16 @@ use App\Models\academic_years;
 use App\Models\ActivityLog;
 use App\Models\Installment;
 use App\Models\ParentModel;
-use Filament\Pages\Page;
+use App\Services\RevenueCalculator;
 use Filament\Actions\Action;
-use Filament\Notifications\Notification;
+use Filament\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Auth;
 
 class RevenueReport extends Page implements HasTable
 {
@@ -31,15 +28,10 @@ class RevenueReport extends Page implements HasTable
     protected string $view = 'filament.pages.reports.revenue-report';
     protected static ?string $title = 'تقرير الأقساط والإيرادات';
 
-    public ?string $selectedYear = null;
-    public ?string $paymentStatus = null;
+    private ?RevenueCalculator $calculator = null;
 
     public function mount(): void
     {
-        // عدم تعيين السنة الدراسية بشكل افتراضي - دع المستخدم يختار
-        // $this->selectedYear = academic_years::where('is_active', true)->first()?->year_label;
-        
-        // تسجيل الحدث
         try {
             ActivityLog::create([
                 'user_id' => Auth::id(),
@@ -68,8 +60,11 @@ class RevenueReport extends Page implements HasTable
 
     public function table(Table $table): Table
     {
+        $amount = fn (string $key) => fn (ParentModel $record) => $this->totals($record)[$key];
+        $money = fn ($state) => 'د.ل ' . number_format($state ?? 0, 2);
+
         return $table
-            ->query($this->getFilteredTableQuery())
+            ->query(ParentModel::query())
             ->columns([
                 TextColumn::make('name')
                     ->label('ولي الأمر')
@@ -84,271 +79,64 @@ class RevenueReport extends Page implements HasTable
 
                 TextColumn::make('total_due')
                     ->label('المبلغ المستحق')
-                    ->sortable()
                     ->alignment('center')
-                    ->getStateUsing(function ($record) {
-                        // احصل على جميع أطفال ولي الأمر
-                        $students = $record->students;
-                        $totalDue = 0;
-
-                        foreach ($students as $student) {
-                            // احصل على التسجيل الأكاديمي للطالب
-                            $enrollment = $student->enrollments()
-                                ->when($this->selectedYear, function ($q) {
-                                    $q->whereHas('academicYear', function ($query) {
-                                        $query->where('year_label', $this->selectedYear);
-                                    });
-                                })
-                                ->first();
-
-                            if ($enrollment) {
-                                // احصل على رسم الاشتراك السنوي للصف والسنة
-                                $fee = \App\Models\AnnualSubscriptionFee::where('grade_id', $enrollment->grade_id)
-                                    ->where('academic_year_id', $enrollment->academic_year_id)
-                                    ->first();
-
-                                if ($fee) {
-                                    $totalDue += $fee->amount;
-                                }
-                            }
-                        }
-
-                        return $totalDue;
-                    })
-                    ->formatStateUsing(fn ($state) => 'د.ل ' . number_format($state ?? 0, 2)),
+                    ->getStateUsing($amount('due'))
+                    ->formatStateUsing($money),
 
                 TextColumn::make('total_paid')
                     ->label('المبلغ المدفوع')
-                    ->sortable()
                     ->alignment('center')
-                    ->getStateUsing(function ($record) {
-                        // احصل على المبلغ المدفوع من جدول الاقساط فقط (قسط سنوي فقط)
-                        $paid = \App\Models\Installment::where('parent_id', $record->id)
-                            ->where('installment_type_id', 1) // قسط سنوي فقط
-                            ->whereNotNull('payment_type_id')
-                            ->when($this->selectedYear, function ($q) {
-                                $q->where('academic_year', $this->selectedYear);
-                            })
-                            ->sum('amount');
-
-                        return $paid;
-                    })
-                    ->formatStateUsing(fn ($state) => 'د.ل ' . number_format($state ?? 0, 2)),
+                    ->getStateUsing($amount('paid'))
+                    ->formatStateUsing($money),
 
                 TextColumn::make('remaining')
                     ->label('المبلغ المتبقي')
-                    ->sortable()
                     ->alignment('center')
-                    ->getStateUsing(function ($record) {
-                        // احصل على المستحق
-                        $students = $record->students;
-                        $totalDue = 0;
-
-                        foreach ($students as $student) {
-                            $enrollment = $student->enrollments()
-                                ->when($this->selectedYear, function ($q) {
-                                    $q->whereHas('academicYear', function ($query) {
-                                        $query->where('year_label', $this->selectedYear);
-                                    });
-                                })
-                                ->first();
-
-                            if ($enrollment) {
-                                $fee = \App\Models\AnnualSubscriptionFee::where('grade_id', $enrollment->grade_id)
-                                    ->where('academic_year_id', $enrollment->academic_year_id)
-                                    ->first();
-
-                                if ($fee) {
-                                    $totalDue += $fee->amount;
-                                }
-                            }
-                        }
-
-                        // احصل على المدفوع
-                        $totalPaid = \App\Models\Installment::where('parent_id', $record->id)
-                            ->where('installment_type_id', 1) // قسط سنوي فقط
-                            ->whereNotNull('payment_type_id')
-                            ->when($this->selectedYear, function ($q) {
-                                $q->where('academic_year', $this->selectedYear);
-                            })
-                            ->sum('amount');
-
-                        // احسب الفرق
-                        return $totalDue - $totalPaid;
-                    })
-                    ->formatStateUsing(fn ($state) => 'د.ل ' . number_format($state ?? 0, 2)),
+                    ->getStateUsing($amount('remaining'))
+                    ->formatStateUsing($money),
 
                 TextColumn::make('payment_percentage')
                     ->label('نسبة التحصيل')
-                    ->sortable()
                     ->alignment('center')
-                    ->getStateUsing(function ($record) {
-                        // احصل على المستحق
-                        $students = $record->students;
-                        $totalDue = 0;
-
-                        foreach ($students as $student) {
-                            $enrollment = $student->enrollments()
-                                ->when($this->selectedYear, function ($q) {
-                                    $q->whereHas('academicYear', function ($query) {
-                                        $query->where('year_label', $this->selectedYear);
-                                    });
-                                })
-                                ->first();
-
-                            if ($enrollment) {
-                                $fee = \App\Models\AnnualSubscriptionFee::where('grade_id', $enrollment->grade_id)
-                                    ->where('academic_year_id', $enrollment->academic_year_id)
-                                    ->first();
-
-                                if ($fee) {
-                                    $totalDue += $fee->amount;
-                                }
-                            }
-                        }
-
-                        // احصل على المدفوع
-                        $totalPaid = \App\Models\Installment::where('parent_id', $record->id)
-                            ->where('installment_type_id', 1) // قسط سنوي فقط
-                            ->whereNotNull('payment_type_id')
-                            ->when($this->selectedYear, function ($q) {
-                                $q->where('academic_year', $this->selectedYear);
-                            })
-                            ->sum('amount');
-
-                        // احسب النسبة
-                        return $totalDue > 0 ? ($totalPaid / $totalDue) * 100 : 0;
-                    })
+                    ->getStateUsing($amount('percentage'))
                     ->formatStateUsing(fn ($state) => number_format($state ?? 0, 1) . '%'),
             ])
             ->filters([
-                SelectFilter::make('selectedYear')
+                // أولياء الأمور الذين لديهم أبناء مقيدين في السنة المختارة (الافتراضي: السنة الفعالة)
+                SelectFilter::make('academic_year_id')
                     ->label('السنة الدراسية')
-                    ->attribute('academic_year')
-                    ->options(
-                        academic_years::orderByDesc('id')
-                            ->pluck('year_label', 'year_label')
-                    ),
+                    ->options(fn () => academic_years::orderByDesc('id')->pluck('year_label', 'id'))
+                    ->default(academic_years::getActiveId())
+                    ->query(fn (Builder $query, array $data) => $query->whereHas(
+                        'students.enrollments',
+                        fn ($q) => $q->when($data['value'] ?? null, fn ($q, $yearId) => $q->where('academic_year_id', $yearId)),
+                    )),
 
                 SelectFilter::make('paymentStatus')
                     ->label('حالة الدفع')
                     ->options([
                         'completed' => 'مكتمل',
                         'incomplete' => 'غير مكتمل',
-                    ]),
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        $status = $data['value'] ?? null;
+                        if (!$status) {
+                            return $query;
+                        }
+
+                        $yearId = $this->selectedYearId();
+                        $withYear = $yearId !== null;
+                        $due = RevenueCalculator::dueSql($withYear, 'parents.id');
+                        $paid = RevenueCalculator::paidSql($withYear, 'parents.id');
+                        $bind = $withYear ? [$yearId] : [];
+
+                        return $query
+                            ->whereRaw("$due > 0", $bind)
+                            ->whereRaw($status === 'completed' ? "$paid >= $due" : "$paid < $due", [...$bind, ...$bind]);
+                    }),
             ])
             ->defaultSort('name')
             ->striped();
-    }
-
-    protected function getRevenueQuery()
-    {
-        $query = ParentModel::query()
-            ->select([
-                'parents.id',
-                'parents.name as parent_name',
-                'parents.phone as parent_phone',
-                'installments.academic_year',
-                DB::raw('SUM(installments.amount) as total_amount'),
-                DB::raw('SUM(CASE WHEN installments.payment_type_id IS NOT NULL THEN installments.amount ELSE 0 END) as paid_amount'),
-            ])
-            ->leftJoin('installments', 'parents.id', '=', 'installments.parent_id')
-            ->groupBy('parents.id', 'parents.name', 'parents.phone', 'installments.academic_year');
-
-        // حساب المتبقي والنسبة المئوية في PHP
-        return $query->get()->map(function ($parent) {
-            $totalAmount = $parent->total_amount ?? 0;
-            $paidAmount = $parent->paid_amount ?? 0;
-            
-            return [
-                'parent_name' => $parent->parent_name,
-                'parent_phone' => $parent->parent_phone,
-                'total_amount' => $totalAmount,
-                'paid_amount' => $paidAmount,
-                'remaining_amount' => $totalAmount - $paidAmount,
-                'payment_percentage' => $totalAmount > 0 ? ($paidAmount / $totalAmount * 100) : 0,
-                'academic_year' => $parent->academic_year ?? 'غير محدد',
-            ];
-        });
-    }
-
-    public function getTableQueryString(): string
-    {
-        return '';
-    }
-
-    public function getFilteredTableQuery(): ?Builder
-    {
-        $query = ParentModel::query();
-
-        // فلتر السنة الدراسية - عرض الأولياء الذين لديهم طلاب مسجلين في تلك السنة
-        if ($this->selectedYear) {
-            $query->whereHas('students.enrollments.academicYear', function ($q) {
-                $q->where('year_label', $this->selectedYear);
-            });
-        } else {
-            // عرض الأولياء الذين لديهم طلاب مسجلين
-            $query->whereHas('students.enrollments');
-        }
-
-        // تطبيق فلتر حالة الدفع فقط إذا تم اختياره
-        if ($this->paymentStatus === 'completed') {
-            // المكتمل: المدفوع == المستحق
-            $query->where(function ($q) {
-                $q->whereRaw('(
-                    SELECT COALESCE(SUM(asf.amount), 0)
-                    FROM annual_subscription_fees asf
-                    JOIN student_enrollments se ON se.grade_id = asf.grade_id AND se.academic_year_id = asf.academic_year_id
-                    JOIN students s ON s.id = se.student_id
-                    WHERE s.parent_id = parents.id
-                    ' . ($this->selectedYear ? ' AND ay.year_label = "' . $this->selectedYear . '"' : '') . '
-                ) = (
-                    SELECT COALESCE(SUM(i.amount), 0)
-                    FROM installments i
-                    WHERE i.parent_id = parents.id
-                    AND i.installment_type_id = 1
-                    AND i.payment_type_id IS NOT NULL
-                    ' . ($this->selectedYear ? ' AND i.academic_year = "' . $this->selectedYear . '"' : '') . '
-                )
-                AND (
-                    SELECT COALESCE(SUM(asf.amount), 0)
-                    FROM annual_subscription_fees asf
-                    JOIN student_enrollments se ON se.grade_id = asf.grade_id AND se.academic_year_id = asf.academic_year_id
-                    JOIN students s ON s.id = se.student_id
-                    WHERE s.parent_id = parents.id
-                    ' . ($this->selectedYear ? ' AND ay.year_label = "' . $this->selectedYear . '"' : '') . '
-                ) > 0');
-            });
-        } elseif ($this->paymentStatus === 'incomplete') {
-            // غير المكتمل: المدفوع < المستحق
-            $query->where(function ($q) {
-                $q->whereRaw('(
-                    SELECT COALESCE(SUM(i.amount), 0)
-                    FROM installments i
-                    WHERE i.parent_id = parents.id
-                    AND i.installment_type_id = 1
-                    AND i.payment_type_id IS NOT NULL
-                    ' . ($this->selectedYear ? ' AND i.academic_year = "' . $this->selectedYear . '"' : '') . '
-                ) < (
-                    SELECT COALESCE(SUM(asf.amount), 0)
-                    FROM annual_subscription_fees asf
-                    JOIN student_enrollments se ON se.grade_id = asf.grade_id AND se.academic_year_id = asf.academic_year_id
-                    JOIN students s ON s.id = se.student_id
-                    WHERE s.parent_id = parents.id
-                    ' . ($this->selectedYear ? ' AND ay.year_label = "' . $this->selectedYear . '"' : '') . '
-                )
-                AND (
-                    SELECT COALESCE(SUM(asf.amount), 0)
-                    FROM annual_subscription_fees asf
-                    JOIN student_enrollments se ON se.grade_id = asf.grade_id AND se.academic_year_id = asf.academic_year_id
-                    JOIN students s ON s.id = se.student_id
-                    WHERE s.parent_id = parents.id
-                    ' . ($this->selectedYear ? ' AND ay.year_label = "' . $this->selectedYear . '"' : '') . '
-                ) > 0');
-            });
-        }
-
-        return $query;
     }
 
     protected function getHeaderActions(): array
@@ -363,8 +151,22 @@ class RevenueReport extends Page implements HasTable
 
     public function downloadPdf()
     {
-        return redirect()->route('reports.revenue.pdf', [
-            'year' => $this->selectedYear,
-        ]);
+        return redirect()->route('reports.revenue.pdf', array_filter([
+            'year_id' => $this->selectedYearId(),
+        ]));
+    }
+
+    private function selectedYearId(): ?int
+    {
+        $value = $this->tableFilters['academic_year_id']['value'] ?? null;
+
+        return filled($value) ? (int) $value : null;
+    }
+
+    private function totals(ParentModel $record): array
+    {
+        $this->calculator ??= new RevenueCalculator;
+
+        return $this->calculator->forParent((int) $record->id, $this->selectedYearId());
     }
 }

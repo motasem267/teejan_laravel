@@ -74,7 +74,8 @@ class StudentForm
                     ->schema([
                         Select::make('academic_year')
                             ->label('السنة الدراسية')
-                            ->options(academic_years::pluck('year_label', 'id'))
+                            ->options(academic_years::orderByDesc('id')->pluck('year_label', 'id'))
+                            ->default(academic_years::getActiveId())
                             ->searchable()
                             ->preload()
                             ->required(),

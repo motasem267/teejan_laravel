@@ -67,10 +67,11 @@ class BulkTeacherClassAssignment extends Page implements HasForms
                             ->schema([
                                 Select::make('teacher_id')
                                     ->label('المعلم')
-                                    ->options(fn (): array => Employee::whereHas(
+                                    // المعلمين المقيدين في السنة المختارة
+                                    ->options(fn (Get $get): array => Employee::whereHas(
                                         'employeeType',
                                         fn (Builder $q) => $q->where('type_name', 'LIKE', '%معلم%'),
-                                    )->pluck('name', 'id')->toArray())
+                                    )->enrolledIn($get('academic_year_id'))->orderBy('name')->pluck('name', 'id')->toArray())
                                     ->required()
                                     ->searchable()
                                     ->preload()

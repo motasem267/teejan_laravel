@@ -40,4 +40,12 @@ class Installment extends Model
     {
         return $this->belongsTo(Employee::class, 'created_by');
     }
+
+    /**
+     * عمود academic_year يخزن رقم السنة الدراسية (id).
+     */
+    public function academicYear(): BelongsTo
+    {
+        return $this->belongsTo(academic_years::class, 'academic_year');
+    }
 }
